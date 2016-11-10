@@ -34,6 +34,7 @@ import bean.PropertyValues;
 
 public class ClassPathXmlApplicationContext extends AbstractApplicationContext{	
 
+	String java_root = System.getProperty("user.dir") + File.separator+ "src";
 	
 	public ClassPathXmlApplicationContext(Resource resource)
 	{		
@@ -82,7 +83,7 @@ public class ClassPathXmlApplicationContext extends AbstractApplicationContext{
         						//传入依赖实例
         						propertyValues.AddPropertyValue(new PropertyValue(name,this.getBean(ref)));
         					}else{
-        						//如果在map找不到就向下寻找bean
+        						//如果在map向下寻找bean
         						achieveRef(ref,resource, i+1);
         						propertyValues.AddPropertyValue(new PropertyValue(name,this.getBean(ref)));
         					}
@@ -161,8 +162,8 @@ public class ClassPathXmlApplicationContext extends AbstractApplicationContext{
 	}
 	
 	public void addComponent(){
-		String ROOT = System.getProperty("user.dir") + File.separator+ "src";	
-		readFile(ROOT);	
+		
+		readFile(java_root);	
 	}
 	
 	//遍历所有package下的含有Component的java文件
@@ -180,7 +181,7 @@ public class ClassPathXmlApplicationContext extends AbstractApplicationContext{
 					try {
 						
 						String  str=filePath+File.separator+ fileName;
-						String beanClassName=str.substring(26, str.length()-5).replace('\\', '.');
+						String beanClassName=str.substring(java_root.length()+1, str.length()-5).replace('\\', '.');
 						Class<?> beanClass = Class.forName(beanClassName);
 					
 						//判断是否含有Component注解,并加入到beanDefinitionMap中
@@ -259,27 +260,39 @@ public class ClassPathXmlApplicationContext extends AbstractApplicationContext{
 		        				
 		        				String name = ele.getAttribute("name");
 		        				Class<?> type;
-								try {
-									type = beandef.getBeanClass().getDeclaredField(name).getType();
-									Object value = ele.getAttribute("value");
-			        				
-									if(type == Integer.class)	        				
-	        						{        					
-	        							value = Integer.parseInt((String) value);      				
-	        						}else if(type == String.class){        					
-	        							value = String.valueOf((String) value);     			
-	        						}
+		        				
+		        				if(!ele.getAttribute("ref").isEmpty()){
+		        					String  ref=ele.getAttribute("ref");
+		        					if(isExistBean(ref)){
+		        						//传入依赖实例
+		        						propertyValues.AddPropertyValue(new PropertyValue(name,this.getBean(ref)));
+		        					}else{
+		        						//如果在map向下寻找bean
+		        						achieveRef(ref,resource, j+1);
+		        						propertyValues.AddPropertyValue(new PropertyValue(name,this.getBean(ref)));
+		        					}
+		        				}else if(!ele.getAttribute("value").isEmpty()){	
+								
+		        					try {
 									
-									propertyValues.AddPropertyValue(new PropertyValue(name,value));
-			        				
-								} catch (NoSuchFieldException e) {
+		        						type = beandef.getBeanClass().getDeclaredField(name).getType();									
+		        						Object value = ele.getAttribute("value");							
+		        						if(type == Integer.class)	        					        						
+		        						{        					        							
+		        							value = Integer.parseInt((String) value);      				        						
+		        						}else if(type == String.class){        						        							
+		        							value = String.valueOf((String) value);     				        					
+		        						}	        					
+		        						propertyValues.AddPropertyValue(new PropertyValue(name,value));			        											
+		        					} catch (NoSuchFieldException e) {
+							
 									// TODO Auto-generated catch block
-									e.printStackTrace();
-								} catch (SecurityException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-		        				    				
+									e.printStackTrace();															
+		        					} catch (SecurityException e) {
+									// TODO Auto-generated catch block								
+									e.printStackTrace();													
+		        					}	        				
+		        				}
 		        			}
 		            	}
 	            		
